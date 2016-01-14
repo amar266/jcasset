@@ -1,0 +1,7 @@
+dist
+help
+build
+venv
+jscasset.egg-info
+jcasset/*.pyc
+jcassset/tests/*.pyc
