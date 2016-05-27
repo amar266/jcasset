@@ -12,15 +12,17 @@ class Servers(Base):
     rackno = Column(String(30), unique=False)
     runits = Column(String(30), unique=False)
     mgmt_ip = Column(String(16), unique=True)
+    env = Column(String(16), unique=True)
     status = Column(String(200), default="None")
     ServerDR = relationship('Server_DESC', backref='Server_DESC.sno', primaryjoin='Servers.sno==Server_DESC.sno', lazy='joined')
-    def __init__(self, sno=None, name=None, vendor=None, rackno=None, runits=None, mgmt_ip=None):
+    def __init__(self, sno=None, name=None, vendor=None, rackno=None, runits=None, mgmt_ip=None, env=None):
         self.sno = sno
         self.name = name
         self.vendor = vendor
         self.rackno = rackno
         self.runits = runits
         self.mgmt_ip = mgmt_ip
+        self.env = env
     def __repr__(self):
         return '<Servers %r>' % self.sno
 
@@ -33,13 +35,19 @@ class Server_DESC(Base):
     role = Column(String(30))
     owner = Column(String(30))
     data_ip =  Column(String(16))
-    def __init__(self,sno=None, type=None, hostname=None, role=None, owner=None, data_ip=None):
+    gateway =  Column(String(16))
+    netmask =  Column(String(16))
+    interface =  Column(String(16))
+    def __init__(self,sno=None, type=None, hostname=None, role=None, owner=None, data_ip=None, gateway=None, netmask=None, interface=None):
         self.sno = sno
         self.type = type
         self.hostname = hostname
         self.role = role
         self.owner = owner
         self.data_ip = data_ip
+        self.gateway = gateway
+        self.netmask = netmask
+        self.interface = interface
     def __repr__(self):
         return "<Server_DESC: %r>"%self.sno
 

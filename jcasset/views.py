@@ -11,11 +11,15 @@ class Server(Resource):
     parser.add_argument('rackno', type=str, help='Rack Number')
     parser.add_argument('runits', type=str, help='Position in rack')
     parser.add_argument('mgmt_ip', type=str, help='ILO IP of the Server')
+    parser.add_argument('env', type=str, help='Server Environment')
     parser.add_argument('type', type=str, help='Type of Server')
     parser.add_argument('hostname', type=str, help='Hostname of Server')
     parser.add_argument('role', type=str, help='Role Of Server')
     parser.add_argument('owner', type=str, help='Owner of Server')
     parser.add_argument('data_ip', type=str, help='Data Ip of Server')
+    parser.add_argument('gateway', type=str, help='Gateway of Server')
+    parser.add_argument('netmask', type=str, help='Netmask of Server')
+    parser.add_argument('interface', type=str, help='Active Interface of Server')
 
     @auth.login_required
     def get(self, serial_no=None):
@@ -41,8 +45,8 @@ class Server(Resource):
     def post(self,serial_no):
         data = request.json
         args = self.parser.parse_args()
-        Ser = Servers(serial_no, args["name"], args["vendor"], args["rackno"], args["runits"], args["mgmt_ip"])
-        Ser_desc = Server_DESC(serial_no,args["type"], args["hostname"], args["role"], args["owner"],args["data_ip"])
+        Ser = Servers(serial_no, args["name"], args["vendor"], args["rackno"], args["runits"], args["mgmt_ip"], args["env"])
+        Ser_desc = Server_DESC(serial_no,args["type"], args["hostname"], args["role"], args["owner"],args["data_ip"], args["gateway"], args["netmask"], args["interface"])
         db_session.add(Ser)
         db_session.add(Ser_desc)
         db_session.commit()
