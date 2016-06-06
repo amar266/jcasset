@@ -3,6 +3,9 @@ from flask_restful import Resource, reqparse
 from app import db_session
 from auth import auth
 from models import Servers, Server_DESC
+from string import Template
+import os, sys
+import subprocess
 
 class Server(Resource):
     parser = reqparse.RequestParser()
@@ -65,3 +68,94 @@ class Server(Resource):
         Server_DESC.query.filter_by(sno=serial_no).delete()
         db_session.commit()
         return "Deleted %s" %serial_no
+
+class Spawn(Resource):
+    parser = reqparse.RequestParser()
+    parser.add_argument('name', type=str, help='Name for the Server')
+    @auth.login_required
+    def get(self, serial_no=None):
+
+        tasks = Servers.query.join(Server_DESC).filter_by(sno=serial_no).all()
+
+        output = []
+        for task in tasks:
+
+            row = {}
+            for field in Servers.__table__.c:
+                row[str(field.name)] = getattr(task, field.name, None)
+            for field in Server_DESC.__table__.c:
+                row[str(field.name)] = getattr(task.ServerDR, field.name, None)
+            output.append(row)
+        iso = self.create_iso(serial_no)
+        return jsonify(Server=output)
+  
+    def post_usr(self,usr):
+        #usr = self.usr
+        post = ""
+        for i in usr:
+            username = i["username"]
+            password = i["password"]
+            key = i["key"]
+            data_usr = {'username':username, 'password':password,'key':key}
+            fileus = open("./jcasset/templates/usr.txt")
+            src = Template ( fileus.read() )
+            post_val = src.substitute(data_usr)
+            post = post + post_val
+            fileus.close()
+
+        return post
+ 
+    def create_ks(self,serial_no):
+         tasks = Servers.query.join(Server_DESC).filter_by(sno=serial_no).all()
+         for task in tasks:
+             ip = getattr(task.ServerDR, "data_ip", None)
+             netmask = getattr(task.ServerDR, "netmask", None)
+             gateway = getattr(task.ServerDR, "gateway", None)
+             interface = getattr(task.ServerDR, "interface", None)
+             hostname = getattr(task.ServerDR, "hostname", None)
+         #cwd = os.getcwd()
+         ksfile = open("./jcasset/templates/ks.cfg")
+         src = Template( ksfile.read() )
+         usr = usr = [{'username':'vpc_team', 'password':'teststag', 'key':"sdna,msbd,nabsdbasbd,amsnbd,bf,sdn v,nsbdv,nsbv,ns"}, {'username':'amar', 'password':'teststag', 'key':"sdna,msbd,nabsdbasbd,amsnbd,bf,sdn v,nsbdv,nsbv,ns"}] 
+         post = self.post_usr(usr)
+         d = { 'ip':ip, 'netmask':netmask, 'gateway':gateway, 'nameserver':'10.140.218.59', 'proxy':'10.140.218.59', 'port':'3128','post':post, 'hostname':hostname, 'interface':interface}
+         result = src.substitute(d)
+         ksfile.close()
+         nfile = open("/tmp/amar.txt", 'w+')
+         nfile.write(result)
+         nfile.close()
+
+    def create_iso(self, serial_no):
+        #create directory for temporary use
+        #generate a random name
+        dirname = "/tmp/dfsdfsdfsd"  
+        os.mkdir(dirname)
+        #Copy iso data to the directory
+        try:
+            subprocess.call(["cp", "-rT", "/home/ubuntu/iso_temp/",dirname])
+        except:
+            print "Command failed"
+        os.chdir(dirname)
+        #create ks file 
+        #ks = self.create_ks(serial_no)        
+        try:
+            subprocess.call(["mkisofs", "-D", "-r", "-V", "ATTENDLESS_UBUNTU", "-cache-inodes", "-J", "-l", "-b", "isolinux/isolinux.bin", "-c", "isolinux/boot.cat", "-no-emul-boot", "-boot-load-size", "4", "-boot-info-table", "-o", "/var/www/html/iso/autoinstall5.iso", dirname])
+        except:
+           print "ISO Creation Failed"
+        #Remove tmp dir
+        #os.rmdir(dirname)
+
+
+
+
+
+
+
+        
+
+
+
+
+
+
+

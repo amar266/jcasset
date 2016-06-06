@@ -1,0 +1,15 @@
+/usr/sbin/useradd -m $username
+rm -rf /home/$username/.ssh
+mkdir /home/$username/.ssh
+chmod 700 /home/$username/.ssh
+chown $username:$username /home/$username/.ssh/ -R
+echo '$username:password' | chpasswd
+/bin/cat <<eot > /home/$username/.ssh/authorized_keys
+$key
+eot
+
+/bin/cat <<eot > /etc/sudoers.d/20_$username
+$username ALL=(ALL) NOPASSWD: ALL
+eot
+chmod 700 /etc/sudoers.d/20_$username
+
