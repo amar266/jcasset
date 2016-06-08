@@ -70,3 +70,37 @@ class User(Base):
 
     def __repr__(self):
         return "<Username: %r>" %self.username
+
+
+class Os_Users(Base):
+    __tablename__ = 'Os_Users'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(30))
+    password = Column(String(50))
+    ssh_key  = Column(String(500))
+
+    def __init__(self, username, password, ssh_key):
+        self.username = username
+        self.password = password
+        self.ssh_key = ssh_key
+    def __repr__(self):
+        return "<Server_DESC: %r>"%self.id
+
+class Environment(Base):
+    __tablename__ = 'Environment'
+    id = Column(Integer, primary_key=True)
+    env = Column(String(30))
+    dns = Column(String(50))
+    proxy  = Column(String(22))
+    subnets  = Column(String(25))
+
+    def __init__(self, env, dns, proxy, subnets):
+        self.env = env
+        self.dns = dns
+        self.proxy = proxy
+        self.subnets = subnets
+    def __repr__(self):
+        return "<Environment: %r>"%self.id
+
+
+

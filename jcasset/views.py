@@ -2,10 +2,12 @@ from flask import Flask, request, jsonify
 from flask_restful import Resource, reqparse
 from app import db_session
 from auth import auth
-from models import Servers, Server_DESC
+from models import Servers, Server_DESC, Environment
 from string import Template
 import os, sys
 import subprocess
+import time
+import shutil
 
 class Server(Resource):
     parser = reqparse.RequestParser()
@@ -88,7 +90,7 @@ class Spawn(Resource):
             output.append(row)
         iso = self.create_iso(serial_no)
         return jsonify(Server=output)
-  
+
     def post_usr(self,usr):
         #usr = self.usr
         post = ""
@@ -97,15 +99,15 @@ class Spawn(Resource):
             password = i["password"]
             key = i["key"]
             data_usr = {'username':username, 'password':password,'key':key}
-            fileus = open("./jcasset/templates/usr.txt")
+            fileus = open("/root/jcassets/jcasset/templates/usr.txt")
             src = Template ( fileus.read() )
             post_val = src.substitute(data_usr)
             post = post + post_val
             fileus.close()
 
         return post
- 
-    def create_ks(self,serial_no):
+
+    def create_ks(self,serial_no,file_name):
          tasks = Servers.query.join(Server_DESC).filter_by(sno=serial_no).all()
          for task in tasks:
              ip = getattr(task.ServerDR, "data_ip", None)
@@ -113,22 +115,28 @@ class Spawn(Resource):
              gateway = getattr(task.ServerDR, "gateway", None)
              interface = getattr(task.ServerDR, "interface", None)
              hostname = getattr(task.ServerDR, "hostname", None)
+             envm      = getattr(task, "env", None)
+         getenv = Environment.query.filter_by(env=envm).all()
+         for envdata in getenv:
+            dns = getattr(envdata, "dns", None)
+            proxy = getattr(envdata, "proxy", None)
          #cwd = os.getcwd()
-         ksfile = open("./jcasset/templates/ks.cfg")
+         ksfile = open("/root/jcassets/jcasset/templates/ks.cfg")
          src = Template( ksfile.read() )
-         usr = usr = [{'username':'vpc_team', 'password':'teststag', 'key':"sdna,msbd,nabsdbasbd,amsnbd,bf,sdn v,nsbdv,nsbv,ns"}, {'username':'amar', 'password':'teststag', 'key':"sdna,msbd,nabsdbasbd,amsnbd,bf,sdn v,nsbdv,nsbv,ns"}] 
+         usr = [{'username':'vpc_team', 'password':'password', 'key':"sdna,msbd,nabsdbasbd,amsnbd,bf,sdn v,nsbdv,nsbv,ns"}, {'username':'amar', 'password':'password', 'key':"sdna,msbd,nabsdbasbd,amsnbd,bf,sdn v,nsbdv,nsbv,ns"}]
          post = self.post_usr(usr)
-         d = { 'ip':ip, 'netmask':netmask, 'gateway':gateway, 'nameserver':'10.140.218.59', 'proxy':'10.140.218.59', 'port':'3128','post':post, 'hostname':hostname, 'interface':interface}
+         d = { 'ip':ip, 'netmask':netmask, 'gateway':gateway, 'nameserver':dns, 'proxy':proxy, 'post':post, 'hostname':hostname, 'interface':interface}
          result = src.substitute(d)
          ksfile.close()
-         nfile = open("/tmp/amar.txt", 'w+')
+         nfile = open(file_name, 'w+')
          nfile.write(result)
          nfile.close()
 
     def create_iso(self, serial_no):
         #create directory for temporary use
         #generate a random name
-        dirname = "/tmp/dfsdfsdfsd"  
+        timestamp = int(time.time())
+        dirname = "/tmp/%s_%s" %(serial_no, timestamp)
         os.mkdir(dirname)
         #Copy iso data to the directory
         try:
@@ -137,25 +145,12 @@ class Spawn(Resource):
             print "Command failed"
         os.chdir(dirname)
         #create ks file 
-        #ks = self.create_ks(serial_no)        
+        ksfile = "%s/ks.cfg" %dirname
+        ks = self.create_ks(serial_no, ksfile)
+        final_iso =  "/var/www/html/iso/%s_%s.iso" %(serial_no, timestamp)
         try:
-            subprocess.call(["mkisofs", "-D", "-r", "-V", "ATTENDLESS_UBUNTU", "-cache-inodes", "-J", "-l", "-b", "isolinux/isolinux.bin", "-c", "isolinux/boot.cat", "-no-emul-boot", "-boot-load-size", "4", "-boot-info-table", "-o", "/var/www/html/iso/autoinstall5.iso", dirname])
+            subprocess.call(["mkisofs", "-D", "-r", "-V", "ATTENDLESS_UBUNTU", "-cache-inodes", "-J", "-l", "-b", "isolinux/isolinux.bin", "-c", "isolinux/boot.cat", "-no-emul-boot", "-boot-load-size", "4", "-boot-info-table", "-o", final_iso, dirname])
         except:
            print "ISO Creation Failed"
         #Remove tmp dir
-        #os.rmdir(dirname)
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
+        shutil.rmtree(dirname)
